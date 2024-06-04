@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "faker": "^5.5.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/faker": "^6.6.9",
+    "@types/uuid": "^9.0.8"
+  }
+}
