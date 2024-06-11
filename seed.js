@@ -29,7 +29,8 @@ function generateUsers(count) {
             us_province: faker.address.state().substring(0, 20),
             us_city: faker.address.city().substring(0, 20),
             us_postal_code: faker.address.zipCode().substring(0, 5),
-            us_role: faker.random.number({min: 1, max: 10})
+            us_rewards: faker.random.number({ min: 1, max: 5 }),
+            us_role: faker.random.number({ min: 1, max: 1 })
         };
         users.push(user);
     }
@@ -92,7 +93,7 @@ function generateProducts(count, suppliers, categories) {
             pr_price: faker.random.number({ min: 1, max: 1000 }),
             pr_description: faker.lorem.sentence().substring(0, 255),
             pr_quantity: faker.random.number({ min: 1, max: 100 }),
-            pr_images: faker.image.imageUrl(), // For simplicity, using URL instead of blob
+            pr_images: '\\x' + Buffer.from(faker.image.imageUrl()).toString('hex'), // Assuming image URLs are converted to binary
             suppliers_sup_id: suppliers[faker.random.number({ min: 0, max: suppliers.length - 1 })].sup_id,
             products_categories_cat_id: categories[faker.random.number({ min: 0, max: categories.length - 1 })].cat_id
         };
@@ -133,14 +134,15 @@ function generateProductsOrders(count, orders, products) {
 }
 
 // Generate Products Reviews
-function generateProductsReviews(count) {
+function generateProductsReviews(count, products) {
     let reviews = [];
     for (let i = 0; i < count; i++) {
         let review = {
             pr_r_id: uuidv4(),
             pr_r_rating: faker.random.number({ min: 1, max: 5 }),
             pr_r_review: faker.lorem.paragraph(),
-            pr_r_images: faker.image.imageUrl() // For simplicity, using URL instead of blob
+            pr_r_images: '\\x' + Buffer.from(faker.image.imageUrl()).toString('hex'), // Assuming image URLs are converted to binary
+            products_pr_id: products[faker.random.number({ min: 0, max: products.length - 1 })].pr_id
         };
         reviews.push(review);
     }
@@ -165,21 +167,23 @@ function generateProductsOrdersProductsReviews(count, productsOrders, reviews) {
 function generateInsertStatements(tableName, data) {
     return data.map(row => {
         const columns = Object.keys(row).join(', ');
-        const values = Object.values(row).map(value => `'${value}'`).join(', ');
+        const values = Object.values(row).map(value => 
+            typeof value === 'string' && value.startsWith('\\x') ? value : `'${value}'`
+        ).join(', ');
         return `INSERT INTO ${tableName} (${columns}) VALUES (${values});`;
     }).join('\n');
 }
 
 // Generate all data
-const suppliers = generateSuppliers(50);
-const users = generateUsers(100);
-const payments = generatePayments(100);
-const shipments = generateShipments(50);
+const suppliers = generateSuppliers(1000);
+const users = generateUsers(10000);
+const payments = generatePayments(10000);
+const shipments = generateShipments(1000);
 const productCategories = generateProductCategories(10);
 const products = generateProducts(200, suppliers, productCategories);
 const orders = generateOrders(200, users, payments, shipments);
 const productsOrders = generateProductsOrders(500, orders, products);
-const productsReviews = generateProductsReviews(100);
+const productsReviews = generateProductsReviews(100, products);
 const productsOrdersProductsReviews = generateProductsOrdersProductsReviews(100, productsOrders, productsReviews);
 
 // Generate SQL insert statements for all tables
@@ -188,12 +192,6 @@ const insertStatements = [
     generateInsertStatements('users', users),
     generateInsertStatements('payments', payments),
     generateInsertStatements('shipments', shipments),
-    generateInsertStatements('products_categories', productCategories),
-    generateInsertStatements('products', products),
-    generateInsertStatements('orders', orders),
-    generateInsertStatements('products_orders', productsOrders),
-    generateInsertStatements('products_reviews', productsReviews),
-    generateInsertStatements('products_orders_products_reviews', productsOrdersProductsReviews)
 ].join('\n\n');
 
 // Write insert statements to file
