@@ -175,10 +175,10 @@ function generateInsertStatements(tableName, data) {
 }
 
 // Generate all data
-const suppliers = generateSuppliers(1000);
-const users = generateUsers(10000);
-const payments = generatePayments(10000);
-const shipments = generateShipments(1000);
+const suppliers = generateSuppliers(50);
+const users = generateUsers(100);
+const payments = generatePayments(100);
+const shipments = generateShipments(50);
 const productCategories = generateProductCategories(10);
 const products = generateProducts(200, suppliers, productCategories);
 const orders = generateOrders(200, users, payments, shipments);
@@ -192,6 +192,12 @@ const insertStatements = [
     generateInsertStatements('users', users),
     generateInsertStatements('payments', payments),
     generateInsertStatements('shipments', shipments),
+    generateInsertStatements('products_categories', productCategories),
+    generateInsertStatements('products', products),
+    generateInsertStatements('orders', orders),
+    generateInsertStatements('products_orders', productsOrders),
+    generateInsertStatements('products_reviews', productsReviews),
+    generateInsertStatements('products_orders_products_reviews', productsOrdersProductsReviews)
 ].join('\n\n');
 
 // Write insert statements to file
