@@ -1,9 +1,11 @@
 {
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "faker": "^5.5.3",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
     "@types/faker": "^6.6.9",
     "@types/uuid": "^9.0.8"
   }
