@@ -15,6 +15,7 @@ function generateSuppliers(count) {
     };
     suppliers.push(supplier);
   }
+  console.log("Suppliers generated");
   return suppliers;
 }
 
@@ -41,6 +42,7 @@ function generateUsers(count) {
     };
     users.push(user);
   }
+  console.log("Users generated");
   return users;
 }
 
@@ -55,6 +57,7 @@ function generatePayments(count) {
     };
     payments.push(payment);
   }
+  console.log("Payments generated");
   return payments;
 }
 
@@ -73,10 +76,11 @@ function generateShipments(count) {
     };
     shipments.push(shipment);
   }
+  console.log("Shipments generated");
   return shipments;
 }
 
-// Generate Products Categories
+// Generate Product Categories
 function generateProductCategories(count) {
   let categories = [];
   for (let i = 0; i < count; i++) {
@@ -87,6 +91,7 @@ function generateProductCategories(count) {
     };
     categories.push(category);
   }
+  console.log("Product Categories generated");
   return categories;
 }
 
@@ -111,11 +116,12 @@ function generateProducts(count, suppliers, categories) {
     };
     products.push(product);
   }
+  console.log("Products generated");
   return products;
 }
 
 // Generate Orders
-function generateOrders(count, users, payments, shipments) {
+function generateOrders(count, users, payments, shipments, vouchers) {
   let orders = [];
   for (let i = 0; i < count; i++) {
     let order = {
@@ -130,9 +136,13 @@ function generateOrders(count, users, payments, shipments) {
       payments_p_id:
         payments[faker.datatype.number({ min: 0, max: payments.length - 1 })]
           .p_id,
+      voucher_id:
+        vouchers[faker.datatype.number({ min: 0, max: vouchers.length - 1 })]
+          .voucher_id,
     };
     orders.push(order);
   }
+  console.log("Orders generated");
   return orders;
 }
 
@@ -150,6 +160,7 @@ function generateProductsOrders(count, orders, products) {
     };
     productsOrders.push(productOrder);
   }
+  console.log("Products Orders generated");
   return productsOrders;
 }
 
@@ -168,7 +179,49 @@ function generateProductsReviews(count, products) {
     };
     reviews.push(review);
   }
+  console.log("Products Reviews generated");
   return reviews;
+}
+
+// Generate Vouchers
+function generateVouchers(count) {
+  let vouchers = [];
+  for (let i = 0; i < count; i++) {
+    let voucher = {
+      voucher_id: uuidv4(),
+      voucher_code: faker.random.alphaNumeric(10),
+      discount_amount: faker.datatype.number({ min: 5000, max: 10000 }),
+      min_purchase: faker.datatype.number({ min: 50000, max: 150000 }),
+      min_reward: faker.datatype.number({ min: 1, max: 5 }),
+      max_discount: faker.datatype.number({ min: 5000, max: 10000 }),
+      expiration_date: faker.date.future().toISOString().slice(0, 10),
+    };
+    vouchers.push(voucher);
+  }
+  console.log("Vouchers generated");
+  return vouchers;
+}
+
+// Generate User Vouchers
+function generateUserVouchers(count, users, vouchers) {
+  let userVouchers = [];
+  for (let i = 0; i < count; i++) {
+    let userVoucher = {
+      user_voucher_id: uuidv4(),
+      user_id:
+        users[faker.datatype.number({ min: 0, max: users.length - 1 })].us_id,
+      voucher_id:
+        vouchers[faker.datatype.number({ min: 0, max: vouchers.length - 1 })]
+          .voucher_id,
+      issue_date: faker.date.past().toISOString().slice(0, 10),
+      used_date: faker.datatype.boolean()
+        ? faker.date.recent().toISOString().slice(0, 10)
+        : null,
+    };
+    userVouchers.push(userVoucher);
+  }
+  console.log("User Vouchers generated");
+  return userVouchers;
 }
 
 // Function to generate SQL insert statements
@@ -180,12 +233,23 @@ function generateInsertStatements(tableName, data) {
         .map((value) =>
           typeof value === "string" && value.startsWith("\\x")
             ? value
+            : value === null
+            ? "NULL"
             : `'${value}'`
         )
         .join(", ");
       return `INSERT INTO ${tableName} (${columns}) VALUES (${values});`;
     })
     .join("\n");
+}
+
+// Write chunks of data to file
+function writeDataInChunks(filename, tableName, data, chunkSize = 1000) {
+  for (let i = 0; i < data.length; i += chunkSize) {
+    const chunk = data.slice(i, i + chunkSize);
+    const insertStatements = generateInsertStatements(tableName, chunk);
+    fs.appendFileSync(filename, insertStatements + "\n\n");
+  }
 }
 
 // Generate all data
@@ -195,33 +259,25 @@ const payments = generatePayments(500000);
 const shipments = generateShipments(500000);
 const productCategories = generateProductCategories(100);
 const products = generateProducts(200000, suppliers, productCategories);
-const orders = generateOrders(500000, users, payments, shipments);
+const vouchers = generateVouchers(10000);
+const userVouchers = generateUserVouchers(20000, users, vouchers);
+const orders = generateOrders(500000, users, payments, shipments, vouchers);
 const productsOrders = generateProductsOrders(500000, orders, products);
 const productsReviews = generateProductsReviews(200000, products);
-const productsOrdersProductsReviews = generateProductsOrdersProductsReviews(
-  200000,
-  productsOrders,
-  productsReviews
-);
 
-// Generate SQL insert statements for all tables
-const insertStatements = [
-  generateInsertStatements("suppliers", suppliers),
-  generateInsertStatements("users", users),
-  generateInsertStatements("payments", payments),
-  generateInsertStatements("shipments", shipments),
-  generateInsertStatements("products_categories", productCategories),
-  generateInsertStatements("products", products),
-  generateInsertStatements("orders", orders),
-  generateInsertStatements("products_orders", productsOrders),
-  generateInsertStatements("products_reviews", productsReviews),
-].join("\n\n");
+// Write insert statements to file in chunks
+const filename = "seedresults.txt";
+fs.writeFileSync(filename, ""); // Clear the file before writing
+writeDataInChunks(filename, "suppliers", suppliers);
+writeDataInChunks(filename, "users", users);
+writeDataInChunks(filename, "payments", payments);
+writeDataInChunks(filename, "shipments", shipments);
+writeDataInChunks(filename, "products_categories", productCategories);
+writeDataInChunks(filename, "products", products);
+writeDataInChunks(filename, "vouchers", vouchers);
+writeDataInChunks(filename, "user_vouchers", userVouchers);
+writeDataInChunks(filename, "orders", orders);
+writeDataInChunks(filename, "products_orders", productsOrders);
+writeDataInChunks(filename, "products_reviews", productsReviews);
 
-// Write insert statements to file
-fs.writeFile("seedresults.txt", insertStatements, (err) => {
-  if (err) {
-    console.error("Error writing to file", err);
-  } else {
-    console.log("Insert statements written to seedresults.txt");
-  }
-});
+console.log("Insert statements written to seedresults.txt");
